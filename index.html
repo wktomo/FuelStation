@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>甜语加油站 | 能量充值</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script>
+    <style>
+        /* ===== 全局变量 ===== */
+        :root {
+            --primary: #00ffff;
+            --secondary: #ff00ff;
+            --accent: #ffff00;
+            --bg-dark: #0f0c29;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none; /* 禁止选中文本 */
+            -webkit-user-select: none;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: var(--font-main);
+            color: #fff;
+        }
+
+        /* ===== 噪点纹理 (提升质感) ===== */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.05;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* ===== 粒子层 ===== */
+        .particles-layer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* ===== 主内容区域 ===== */
+        .main-container {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            max-width: 90vw;
+            padding: 2rem;
+        }
+
+        /* 标题样式升级 */
+        .hero-title {
+            font-size: clamp(3.5rem, 8vw, 7rem);
+            font-weight: 900;
+            color: transparent;
+            -webkit-text-stroke: 2px rgba(255,255,255,0.8);
+            background: linear-gradient(to bottom, #fff 30%, rgba(255,255,255,0.5));
+            -webkit-background-clip: text;
+            background-clip: text;
+            filter: drop-shadow(0 0 15px var(--primary));
+            min-height: 1.2em;
+            letter-spacing: 4px;
+        }
+
+        /* 引语样式 */
+        .motivational-quote {
+            font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+            color: #e0e0e0;
+            margin-top: 2rem;
+            opacity: 0;
+            font-weight: 300;
+            line-height: 1.8;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.2);
+            padding: 10px 20px;
+            border-radius: 50px;
+            display: inline-block;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* ===== 徽章容器 ===== */
+        .badges-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-top: 4rem;
+            opacity: 0;
+        }
+
+        /* 升级版玻璃拟态徽章 */
+        .badge {
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-top: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 1.2rem 1.5rem;
+            min-width: 110px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .badge:hover {
+            transform: translateY(-8px) scale(1.05);
+            background: linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+            box-shadow: 0 15px 40px rgba(0, 255, 255, 0.2);
+            border-color: var(--primary);
+        }
+
+        .badge-icon {
+            font-size: 2.2rem;
+            display: block;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+        }
+
+        /* 光效扫过动画 */
+        .badge::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
+            transform: skewX(-25deg);
+            transition: 0.5s;
+        }
+
+        .badge:hover::after {
+            left: 150%;
+            transition: 0.7s ease-in-out;
+        }
+
+        /* ===== 背景装饰环 ===== */
+        .rotating-rings {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .ring {
+            position: absolute;
+            border: 1px solid rgba(0, 255, 255, 0.1);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.05);
+        }
+
+        .ring-1 { width: 60vmin; height: 60vmin; animation: rotate 40s linear infinite; border-top-color: var(--primary); }
+        .ring-2 { width: 50vmin; height: 50vmin; animation: rotate 30s linear infinite reverse; border-bottom-color: var(--secondary); }
+
+        @keyframes rotate {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* ===== 底部提示 ===== */
+        .click-hint {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            animation: bounce 2s infinite;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.5; }
+            50% { transform: translateX(-50%) translateY(-10px); opacity: 0.9; }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title { font-size: 3rem; -webkit-text-stroke: 1px rgba(255,255,255,0.8); }
+            .badges-container { gap: 0.8rem; }
+            .badge { padding: 1rem; min-width: 90px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="noise-overlay"></div>
+
+    <div class="particles-layer" id="particlesBg"></div>
+    
+    <div class="rotating-rings">
+        <div class="ring ring-1"></div>
+        <div class="ring ring-2"></div>
+    </div>
+    
+    <main class="main-container">
+        <h1 class="hero-title" id="hero-title"></h1>
+        <p class="motivational-quote" id="quote"></p>
+        
+        <div class="badges-container" id="badges">
+            <div class="badge">
+                <span class="badge-icon">🎯</span>
+                <div>坚持</div>
+            </div>
+            <div class="badge">
+                <span class="badge-icon">🔥</span>
+                <div>热爱</div>
+            </div>
+            <div class="badge">
+                <span class="badge-icon">🌟</span>
+                <div>闪耀</div>
+            </div>
+            <div class="badge">
+                <span class="badge-icon">🚀</span>
+                <div>突破</div>
+            </div>
+        </div>
+    </main>
+    
+    <div class="click-hint">加油，相信自己</div>
+
+    <script>
+        (function() {
+            // 1. 禁止右键菜单
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                showWarning('嘿！左键是切换下一句哟 😉');
+            });
+
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'F12' || e.keyCode === 123) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) {
+                    e.preventDefault();
+                    return false;
+                }
+                // Ctrl+U (查看源码)
+                if (e.ctrlKey && e.key === 'u') {
+                    e.preventDefault();
+                    return false;
+                }
+                // Ctrl+S (保存网页)
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+
+            setInterval(() => {
+            }, 1000);
+            function showWarning(text) {
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+                    background: rgba(255,0,80,0.8); color: white; padding: 10px 20px;
+                    border-radius: 30px; font-size: 14px; z-index: 9999;
+                    backdrop-filter: blur(5px); box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                `;
+                toast.textContent = text;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            }
+        })();
+        const CONTENT = {
+            titles: ['你真棒!', '无限可能!', '未来可期!', '光芒万丈!', '独一无二!'],
+            quotes: [
+                '种一棵树最好的时间是十年前，其次是现在 🌱',
+                '星光不问赶路人，时光不负有心人 ✨',
+                '你所做的一切努力，终将照亮前路 💡',
+                '在该奋斗的年纪，不要选择了安逸 🔥',
+                '生活原本沉闷，但跑起来就有风 🏃',
+                '乾坤未定，你我皆是黑马 🐎'
+            ]
+        };
+
+        // 初始化粒子背景
+        function initParticles() {
+            const container = document.getElementById('particlesBg');
+            const count = window.innerWidth < 768 ? 30 : 60;
+            
+            for(let i=0; i<count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 3 + 1;
+                p.style.cssText = `
+                    width: ${size}px; height: ${size}px;
+                    left: ${Math.random() * 100}vw; top: ${Math.random() * 100}vh;
+                    opacity: ${Math.random() * 0.5 + 0.1};
+                    animation: float ${10 + Math.random() * 20}s linear infinite;
+                `;
+                container.appendChild(p);
+                
+                // 简单的漂浮动画
+                anime({
+                    targets: p,
+                    translateY: [0, -100],
+                    translateX: [0, (Math.random() - 0.5) * 50],
+                    easing: 'linear',
+                    duration: 10000 + Math.random() * 10000,
+                    loop: true
+                });
+            }
+        }
+
+        // 打字机逻辑
+        function initTypewriter() {
+            new Typed('#hero-title', {
+                strings: CONTENT.titles,
+                typeSpeed: 100,
+                backSpeed: 60,
+                backDelay: 2000,
+                loop: false,
+                showCursor: true,
+                cursorChar: '|',
+                onComplete: (self) => {
+                    self.cursor.remove(); // 移除光标
+                    revealContent();
+                }
+            });
+        }
+
+        // 内容揭示动画
+        function revealContent() {
+            // 显示语录
+            const quoteEl = document.getElementById('quote');
+            quoteEl.textContent = CONTENT.quotes[0];
+            
+            anime.timeline()
+                .add({
+                    targets: '#quote',
+                    opacity: [0, 1],
+                    translateY: [20, 0],
+                    duration: 1000,
+                    easing: 'easeOutExpo'
+                })
+                .add({
+                    targets: '.badge',
+                    scale: [0, 1],
+                    opacity: [0, 1],
+                    delay: anime.stagger(150),
+                    duration: 800,
+                    easing: 'spring(1, 80, 10, 0)'
+                }, '-=800');
+        }
+
+        // 交互逻辑
+        let quoteIndex = 0;
+        document.body.addEventListener('click', (e) => {
+            // 点击特效
+            createRipple(e.clientX, e.clientY);
+            
+            // 切换语录
+            quoteIndex = (quoteIndex + 1) % CONTENT.quotes.length;
+            const quoteEl = document.getElementById('quote');
+            
+            anime({
+                targets: quoteEl,
+                opacity: [1, 0],
+                duration: 300,
+                easing: 'easeInQuad',
+                complete: () => {
+                    quoteEl.textContent = CONTENT.quotes[quoteIndex];
+                    anime({
+                        targets: quoteEl,
+                        opacity: [0, 1],
+                        translateY: [10, 0],
+                        duration: 600,
+                        easing: 'easeOutQuad'
+                    });
+                }
+            });
+
+            // 随机徽章跳动
+            const badges = document.querySelectorAll('.badge');
+            const randomBadge = badges[Math.floor(Math.random() * badges.length)];
+            anime({
+                targets: randomBadge,
+                scale: [1, 1.2, 1],
+                duration: 400,
+                easing: 'easeInOutQuad'
+            });
+        });
+
+        function createRipple(x, y) {
+            const ripple = document.createElement('div');
+            ripple.style.cssText = `
+                position: fixed; left: ${x}px; top: ${y}px;
+                width: 0; height: 0; border-radius: 50%;
+                background: rgba(0, 255, 255, 0.4);
+                transform: translate(-50%, -50%);
+                pointer-events: none; z-index: 100;
+                box-shadow: 0 0 20px var(--primary);
+            `;
+            document.body.appendChild(ripple);
+            
+            anime({
+                targets: ripple,
+                width: 300, height: 300,
+                opacity: 0,
+                duration: 800,
+                easing: 'easeOutExpo',
+                complete: () => ripple.remove()
+            });
+        }
+
+        // 初始化
+        window.onload = () => {
+            initParticles();
+            initTypewriter();
+        };
+    </script>
+</body>
+</html>
